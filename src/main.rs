@@ -46,5 +46,9 @@ fn main() {
         .read_dir()
         .unwrap()
         .map(|e| e.unwrap().path())
+        .filter(|path| {
+            // TODO: Map over all rules and check against current path
+            true
+        })
         .collect();
 }
