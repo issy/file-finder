@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Rule"
+      }
+    }
+  },
+  "required": ["rules"],
+  "$defs": {
+    "StringComparisonBaseRule": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "startswith": {
+              "type": "string"
+            },
+            "contains": {
+              "type": "string"
+            },
+            "endswith": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "equals": {
+              "type": "string"
+            }
+          },
+          "required": ["equals"]
+        }
+      ]
+    },
+    "StringComparisonRule": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/StringComparisonBaseRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/StringComparisonBaseRule"
+            }
+          }
+        }
+      ]
+    },
+    "BaseRule": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "$ref": "#/$defs/StringComparisonRule"
+        },
+        "content": {
+          "$ref": "#/$defs/StringComparisonRule"
+        }
+      }
+    },
+    "Rule": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/BaseRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "not": {
+              "$ref": "#/$defs/BaseRule"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
