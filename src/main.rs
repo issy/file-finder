@@ -36,5 +36,9 @@ fn main() {
     let file = File::open(args.config_file).unwrap();
     let config: RulesConfig = serde_yaml_ng::from_reader(file).unwrap();
 
-    let directory = args.directory.map(validate_directory).map(Result::unwrap).unwrap_or(current_dir().unwrap());
+    let directory = args
+        .directory
+        .map(validate_directory)
+        .map(Result::unwrap)
+        .unwrap_or(current_dir().unwrap());
 }
