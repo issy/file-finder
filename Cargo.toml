@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
 serde_args = { version = "0.2.0" }
+serde_yaml_ng = { version = "0.10.0" }
 
 [build-dependencies]
 typify = { version = "0.7.0" }
