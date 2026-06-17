@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 use serde::Deserialize;
 
+include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
+
 #[derive(Deserialize)]
 #[serde(expecting = "")]
 #[serde(rename_all = "kebab-case")]
