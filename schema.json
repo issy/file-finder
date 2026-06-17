@@ -1,15 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "properties": {
-    "rules": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/Rule"
-      }
-    }
-  },
-  "required": ["rules"],
+  "$ref": "#/$defs/RulesConfig",
   "$defs": {
     "StringComparisonBaseRule": {
       "oneOf": [
@@ -34,7 +25,9 @@
               "type": "string"
             }
           },
-          "required": ["equals"]
+          "required": [
+            "equals"
+          ]
         }
       ]
     },
@@ -78,6 +71,18 @@
           }
         }
       ]
+    },
+    "RulesConfig": {
+      "type": "object",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Rule"
+          }
+        }
+      },
+      "required": ["rules"]
     }
   }
 }
