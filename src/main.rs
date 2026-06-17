@@ -41,4 +41,10 @@ fn main() {
         .map(validate_directory)
         .map(Result::unwrap)
         .unwrap_or(current_dir().unwrap());
+
+    let all_files: Vec<PathBuf> = directory
+        .read_dir()
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
 }
