@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::env::current_dir;
 use std::fs::File;
+use std::fs::read_to_string;
 use std::ops::Not;
 use std::path::PathBuf;
 
@@ -78,12 +79,24 @@ fn apply_filename_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
     apply_string_comparison_rule(rule, path.to_str().unwrap().to_string())
 }
 
+fn apply_content_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
+    let content = read_to_string(path).unwrap().to_string();
+    apply_string_comparison_rule(rule, content)
+}
+
 fn apply_rule(rule: &Rule, path: &PathBuf) -> bool {
-    let result = true;
-    rule.filename
+    let filename_result = rule
+        .filename
         .as_ref()
         .map(|filename_rule| apply_filename_rule(filename_rule.clone(), path))
-        .unwrap_or(result)
+        .unwrap_or(true);
+    let content_result = rule
+        .content
+        .as_ref()
+        .map(|content_rule| apply_content_rule(content_rule.clone(), path))
+        .unwrap_or(true);
+    // TODO: Implement not result
+    filename_result && content_result
 }
 
 fn main() {
