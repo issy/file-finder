@@ -49,6 +49,9 @@
     "BaseRule": {
       "type": "object",
       "properties": {
+        "dirpath": {
+          "$ref": "#/$defs/StringComparisonRule"
+        },
         "filename": {
           "$ref": "#/$defs/StringComparisonRule"
         },
@@ -80,9 +83,18 @@
           "items": {
             "$ref": "#/$defs/Rule"
           }
+        },
+        "exclude_dirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       },
-      "required": ["rules"]
+      "required": [
+        "rules"
+      ],
+      "additionalProperties": false
     }
   }
 }
