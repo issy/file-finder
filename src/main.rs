@@ -1,7 +1,8 @@
 use serde::Deserialize;
+use std::collections::VecDeque;
 use std::env::current_dir;
-use std::fs::File;
 use std::fs::read_to_string;
+use std::fs::File;
 use std::ops::Not;
 use std::path::PathBuf;
 
@@ -75,8 +76,12 @@ fn apply_string_comparison_rule(rule: StringComparisonRule, value: String) -> bo
     }
 }
 
-fn apply_filename_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
-    apply_string_comparison_rule(rule, path.to_str().unwrap().to_string())
+fn apply_dirpath_rule(rule: StringComparisonRule, dirpath: String) -> bool {
+    apply_string_comparison_rule(rule, dirpath)
+}
+
+fn apply_filename_rule(rule: StringComparisonRule, filename: String) -> bool {
+    apply_string_comparison_rule(rule, filename)
 }
 
 fn apply_content_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
@@ -84,19 +89,33 @@ fn apply_content_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
     apply_string_comparison_rule(rule, content)
 }
 
-fn apply_rule(rule: &Rule, path: &PathBuf) -> bool {
+fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
+    let dirpath_result = rule
+        .dirpath
+        .as_ref()
+        .map(|dirpath_rule| {
+            apply_dirpath_rule(
+                dirpath_rule.clone(),
+                path.parent()
+                    .map(|p| p.strip_prefix(relative_to).unwrap().to_str().unwrap().to_string())
+                    .unwrap_or("".into()),
+            )
+        })
+        .unwrap_or(true);
+
     let filename_result = rule
         .filename
         .as_ref()
-        .map(|filename_rule| apply_filename_rule(filename_rule.clone(), path))
+        .map(|filename_rule| apply_filename_rule(filename_rule.clone(), path.file_name().unwrap().to_str().unwrap().to_string()))
         .unwrap_or(true);
+
     let content_result = rule
         .content
         .as_ref()
         .map(|content_rule| apply_content_rule(content_rule.clone(), path))
         .unwrap_or(true);
     // TODO: Implement not result
-    filename_result && content_result
+    dirpath_result && filename_result && content_result
 }
 
 fn main() {
@@ -130,9 +149,9 @@ fn main() {
         .filter(|path| {
             path.is_file()
                 || config
-                    .exclude_dirs
-                    .contains(&path.to_str().unwrap().to_string())
-                    .not()
+                .exclude_dirs
+                .contains(&path.to_str().unwrap().to_string())
+                .not()
         })
         .collect();
 
@@ -140,19 +159,33 @@ fn main() {
         .iter()
         .for_each(|path| println!("{}", path.display()));
 
-    let all_files: Vec<&PathBuf> = initial_directories
+    let mut all_files: Vec<PathBuf> = Vec::new();
+    let mut to_explore: VecDeque<PathBuf> = VecDeque::from(initial_directories.clone());
+    while !to_explore.is_empty() {
+        let current_path = to_explore.pop_front().unwrap();
+        if current_path.is_file() {
+            all_files.push(current_path);
+        } else {
+            let read_dir = current_path.read_dir().unwrap();
+            read_dir.for_each(|entry| {
+                let path = entry.unwrap().path();
+                to_explore.push_back(path);
+            });
+        }
+    }
+
+    let matched_files: Vec<&PathBuf> = all_files
         .iter()
         .filter(|path| {
-            // TODO: Map over all rules and check against current path
             config
                 .rules
                 .iter()
-                .map(|rule| apply_rule(rule, path))
+                .map(|rule| apply_rule(rule, path, &directory))
                 .all(|result| result)
         })
         .collect();
 
-    all_files
+    matched_files
         .iter()
         .for_each(|path| println!("{}", path.display()));
 }
