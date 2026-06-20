@@ -1,12 +1,12 @@
 mod rule;
 
+use crate::rule::apply_rule;
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::env::current_dir;
 use std::fs::File;
 use std::ops::Not;
 use std::path::PathBuf;
-use crate::rule::apply_rule;
 
 include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 
@@ -43,19 +43,13 @@ fn find_files_in_directory_for_config(directory: &PathBuf, config: RulesConfig) 
     let initial_directories: Vec<PathBuf> = directory
         .read_dir()
         .unwrap()
-        .map(|e| {
-            e.unwrap()
-                .path()
-                .strip_prefix(directory.clone())
-                .unwrap()
-                .to_path_buf()
-        })
+        .map(|e| e.unwrap().path())
         .filter(|path| {
             path.is_file()
                 || config
-                .exclude_dirs
-                .contains(&path.to_str().unwrap().to_string())
-                .not()
+                    .exclude_dirs
+                    .contains(&path.to_str().unwrap().to_string())
+                    .not()
         })
         .collect();
 
@@ -87,6 +81,7 @@ fn find_files_in_directory_for_config(directory: &PathBuf, config: RulesConfig) 
                 .map(|rule| apply_rule(rule, path, &directory))
                 .all(|result| result)
         })
+        .map(|path| path.strip_prefix(directory).unwrap().to_path_buf())
         .collect()
 }
 
