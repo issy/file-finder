@@ -106,6 +106,6 @@ fn main() {
     let matched_files = find_files_in_directory_for_config(&directory, config);
 
     matched_files
-        .iter()
+        .into_iter()
         .for_each(|path| println!("{}", path.display()));
 }
