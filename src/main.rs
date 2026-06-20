@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use std::env::current_dir;
 use std::fs::read_to_string;
 use std::fs::File;
-use std::ops::Not;
+use std::ops::{Not};
 use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
@@ -135,24 +135,7 @@ fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
     base_result && not_result.not()
 }
 
-fn main() {
-    let args: Args = match serde_args::from_env() {
-        Ok(args) => args,
-        Err(error) => {
-            println!("{error}");
-            return;
-        }
-    };
-
-    let file = File::open(args.config_file).unwrap();
-    let config: RulesConfig = serde_yaml_ng::from_reader(file).unwrap();
-
-    let directory = args
-        .directory
-        .map(validate_directory)
-        .map(Result::unwrap)
-        .unwrap_or(current_dir().unwrap());
-
+fn find_files_in_directory_for_config(directory: &PathBuf, config: RulesConfig) -> Vec<PathBuf> {
     let initial_directories: Vec<PathBuf> = directory
         .read_dir()
         .unwrap()
@@ -191,8 +174,8 @@ fn main() {
         }
     }
 
-    let matched_files: Vec<&PathBuf> = all_files
-        .iter()
+    all_files
+        .into_iter()
         .filter(|path| {
             config
                 .rules
@@ -200,7 +183,28 @@ fn main() {
                 .map(|rule| apply_rule(rule, path, &directory))
                 .all(|result| result)
         })
-        .collect();
+        .collect()
+}
+
+fn main() {
+    let args: Args = match serde_args::from_env() {
+        Ok(args) => args,
+        Err(error) => {
+            println!("{error}");
+            return;
+        }
+    };
+
+    let file = File::open(args.config_file).unwrap();
+    let config: RulesConfig = serde_yaml_ng::from_reader(file).unwrap();
+
+    let directory = args
+        .directory
+        .map(validate_directory)
+        .map(Result::unwrap)
+        .unwrap_or(current_dir().unwrap());
+
+    let matched_files = find_files_in_directory_for_config(&directory, config);
 
     matched_files
         .iter()
