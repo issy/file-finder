@@ -1,6 +1,7 @@
 use serde::Deserialize;
 use std::env::current_dir;
 use std::fs::File;
+use std::ops::Not;
 use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
@@ -24,6 +25,68 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
+fn apply_string_comparison_base_rule(rule: StringComparisonBaseRule, value: String) -> bool {
+    match rule {
+        StringComparisonBaseRule::Variant0 {
+            startswith,
+            contains,
+            endswith,
+        } => {
+            let startswith_result = startswith.map(|s| value.starts_with(&s)).unwrap_or(true);
+            let contains_result = contains.map(|c| value.contains(&c)).unwrap_or(true);
+            let endswith_result = endswith.map(|e| value.ends_with(&e)).unwrap_or(true);
+            return startswith_result && contains_result && endswith_result;
+        }
+        StringComparisonBaseRule::Variant1 { equals } => return value.eq(&equals),
+    }
+}
+
+fn apply_string_comparison_rule(rule: StringComparisonRule, value: String) -> bool {
+    match rule {
+        StringComparisonRule::Variant0 {
+            startswith,
+            contains,
+            endswith,
+            not,
+        } => {
+            let positive_section = apply_string_comparison_base_rule(
+                StringComparisonBaseRule::Variant0 {
+                    startswith,
+                    contains,
+                    endswith,
+                },
+                value.clone(),
+            );
+            let negative_section = not
+                .map(|not_rule| apply_string_comparison_base_rule(not_rule, value.clone()).not())
+                .unwrap_or(true);
+            positive_section && negative_section
+        }
+        StringComparisonRule::Variant1 { equals, not } => {
+            let positive_section = apply_string_comparison_base_rule(
+                StringComparisonBaseRule::Variant1 { equals },
+                value.clone(),
+            );
+            let negative_section = not
+                .map(|not_rule| apply_string_comparison_base_rule(not_rule, value.clone()).not())
+                .unwrap_or(true);
+            positive_section && negative_section
+        }
+    }
+}
+
+fn apply_filename_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
+    apply_string_comparison_rule(rule, path.to_str().unwrap().to_string())
+}
+
+fn apply_rule(rule: &Rule, path: &PathBuf) -> bool {
+    let result = true;
+    rule.filename
+        .as_ref()
+        .map(|filename_rule| apply_filename_rule(filename_rule.clone(), path))
+        .unwrap_or(result)
+}
+
 fn main() {
     let args: Args = match serde_args::from_env() {
         Ok(args) => args,
@@ -42,13 +105,42 @@ fn main() {
         .map(Result::unwrap)
         .unwrap_or(current_dir().unwrap());
 
-    let all_files: Vec<PathBuf> = directory
+    let initial_directories: Vec<PathBuf> = directory
         .read_dir()
         .unwrap()
-        .map(|e| e.unwrap().path())
+        .map(|e| {
+            e.unwrap()
+                .path()
+                .strip_prefix(directory.clone())
+                .unwrap()
+                .to_path_buf()
+        })
         .filter(|path| {
-            // TODO: Map over all rules and check against current path
-            true
+            path.is_file()
+                || config
+                    .exclude_dirs
+                    .contains(&path.to_str().unwrap().to_string())
+                    .not()
         })
         .collect();
+
+    initial_directories
+        .iter()
+        .for_each(|path| println!("{}", path.display()));
+
+    let all_files: Vec<&PathBuf> = initial_directories
+        .iter()
+        .filter(|path| {
+            // TODO: Map over all rules and check against current path
+            config
+                .rules
+                .iter()
+                .map(|rule| apply_rule(rule, path))
+                .all(|result| result)
+        })
+        .collect();
+
+    all_files
+        .iter()
+        .for_each(|path| println!("{}", path.display()));
 }
