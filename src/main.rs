@@ -8,6 +8,16 @@ use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 
+impl From<&Rule> for BaseRule {
+    fn from(rule: &Rule) -> Self {
+        BaseRule {
+            dirpath: rule.dirpath.clone(),
+            filename: rule.filename.clone(),
+            content: rule.content.clone(),
+        }
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(expecting = "")]
 #[serde(rename_all = "kebab-case")]
@@ -89,7 +99,7 @@ fn apply_content_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
     apply_string_comparison_rule(rule, content)
 }
 
-fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
+fn apply_base_rule(rule: &BaseRule, path: &PathBuf, relative_to: &PathBuf) -> bool {
     let dirpath_result = rule
         .dirpath
         .as_ref()
@@ -114,8 +124,15 @@ fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
         .as_ref()
         .map(|content_rule| apply_content_rule(content_rule.clone(), path))
         .unwrap_or(true);
-    // TODO: Implement not result
+
     dirpath_result && filename_result && content_result
+}
+
+fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
+    let base_result = apply_base_rule(&BaseRule::from(rule), path, relative_to);
+    let not_result = rule.not.as_ref().map(|not_rule| apply_base_rule(&not_rule, path, relative_to)).unwrap_or(true);
+
+    base_result && not_result.not()
 }
 
 fn main() {
