@@ -1,9 +1,9 @@
 [package]
 name = "file-finder"
-description = "A command line tool to find files in a directory tree based on various criteria."
+description = "CLI to find files in a directory tree based on various criteria"
 homepage = "https://github.com/issy/file-finder"
 repository = "https://github.com/issy/file-finder"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
