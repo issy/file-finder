@@ -1,7 +1,6 @@
+#[allow(clippy::all)]
+#[allow(unused, dead_code)]
 mod generated {
-    #![allow(clippy::all)]
-    #![allow(unused, dead_code)]
-
     include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 }
 
