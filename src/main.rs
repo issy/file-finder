@@ -1,3 +1,10 @@
+mod generated {
+    #![allow(clippy::all)]
+    #![allow(unused, dead_code)]
+
+    include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
+}
+
 mod rule;
 
 use crate::rule::apply_rule;
@@ -7,8 +14,6 @@ use std::env::current_dir;
 use std::fs::File;
 use std::ops::Not;
 use std::path::PathBuf;
-
-include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 
 #[serde_args::generate(version)]
 #[derive(Deserialize)]
@@ -30,7 +35,7 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
-fn find_files_in_directory_for_config(directory: &PathBuf, config: RulesConfig) -> Vec<PathBuf> {
+fn find_files_in_directory_for_config(directory: &PathBuf, config: generated::RulesConfig) -> Vec<PathBuf> {
     let initial_directories: Vec<PathBuf> = directory
         .read_dir()
         .unwrap()
@@ -85,7 +90,7 @@ fn main() {
     };
 
     let file = File::open(args.config_file).unwrap();
-    let config: RulesConfig = serde_yaml_ng::from_reader(file).unwrap();
+    let config: generated::RulesConfig = serde_yaml_ng::from_reader(file).unwrap();
 
     let directory = args
         .directory

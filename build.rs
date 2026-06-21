@@ -12,7 +12,6 @@ fn main() {
     let contents =
         prettyplease::unparse(&syn::parse2::<syn::File>(type_space.to_stream()).unwrap());
 
-    let mut out_file = Path::new(&env::var("OUT_DIR").unwrap()).to_path_buf();
-    out_file.push("codegen.rs");
+    let out_file = Path::new(&env::var("OUT_DIR").unwrap()).join("codegen.rs").to_path_buf();
     fs::write(out_file, contents).unwrap();
 }

@@ -1,7 +1,7 @@
 use std::fs::read_to_string;
 use std::ops::Not;
 use std::path::PathBuf;
-use crate::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
+use crate::generated::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
 
 impl From<&Rule> for BaseRule {
     fn from(rule: &Rule) -> Self {
