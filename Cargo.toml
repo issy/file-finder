@@ -1,5 +1,8 @@
 [package]
 name = "file-finder"
+description = "A command line tool to find files in a directory tree based on various criteria."
+homepage = "https://github.com/issy/file-finder"
+repository = "https://github.com/issy/file-finder"
 version = "0.1.0"
 edition = "2024"
 
@@ -14,3 +17,7 @@ serde_json = { version = "1.0.150" }
 schemars = { version = "0.8.22" }
 prettyplease = { version = "0.2.37" }
 syn = { version = "2.0.118" }
+
+[profile.dist]
+inherits = "release"
+lto = "thin"
