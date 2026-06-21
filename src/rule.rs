@@ -3,6 +3,16 @@ use std::ops::Not;
 use std::path::PathBuf;
 use crate::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
 
+impl From<&Rule> for BaseRule {
+    fn from(rule: &Rule) -> Self {
+        BaseRule {
+            dirpath: rule.dirpath.clone(),
+            filename: rule.filename.clone(),
+            content: rule.content.clone(),
+        }
+    }
+}
+
 fn apply_string_comparison_base_rule(rule: StringComparisonBaseRule, value: String) -> bool {
     match rule {
         StringComparisonBaseRule::Variant0 {

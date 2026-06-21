@@ -10,16 +10,6 @@ use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 
-impl From<&Rule> for BaseRule {
-    fn from(rule: &Rule) -> Self {
-        BaseRule {
-            dirpath: rule.dirpath.clone(),
-            filename: rule.filename.clone(),
-            content: rule.content.clone(),
-        }
-    }
-}
-
 #[derive(Deserialize)]
 #[serde(expecting = "")]
 #[serde(rename_all = "kebab-case")]
