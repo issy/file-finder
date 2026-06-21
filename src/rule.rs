@@ -1,7 +1,7 @@
+use crate::generated::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
 use std::fs::read_to_string;
 use std::ops::Not;
 use std::path::PathBuf;
-use crate::generated::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
 
 impl From<&Rule> for BaseRule {
     fn from(rule: &Rule) -> Self {
@@ -83,7 +83,13 @@ fn apply_base_rule(rule: &BaseRule, path: &PathBuf, relative_to: &PathBuf) -> bo
             apply_dirpath_rule(
                 dirpath_rule.clone(),
                 path.parent()
-                    .map(|p| p.strip_prefix(relative_to).unwrap().to_str().unwrap().to_string())
+                    .map(|p| {
+                        p.strip_prefix(relative_to)
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .to_string()
+                    })
                     .unwrap_or("".into()),
             )
         })
@@ -92,7 +98,12 @@ fn apply_base_rule(rule: &BaseRule, path: &PathBuf, relative_to: &PathBuf) -> bo
     let filename_result = rule
         .filename
         .as_ref()
-        .map(|filename_rule| apply_filename_rule(filename_rule.clone(), path.file_name().unwrap().to_str().unwrap().to_string()))
+        .map(|filename_rule| {
+            apply_filename_rule(
+                filename_rule.clone(),
+                path.file_name().unwrap().to_str().unwrap().to_string(),
+            )
+        })
         .unwrap_or(true);
 
     let content_result = rule
@@ -106,7 +117,11 @@ fn apply_base_rule(rule: &BaseRule, path: &PathBuf, relative_to: &PathBuf) -> bo
 
 pub(crate) fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
     let base_result = apply_base_rule(&BaseRule::from(rule), path, relative_to);
-    let not_result = rule.not.as_ref().map(|not_rule| apply_base_rule(not_rule, path, relative_to)).unwrap_or(true);
+    let not_result = rule
+        .not
+        .as_ref()
+        .map(|not_rule| apply_base_rule(not_rule, path, relative_to))
+        .unwrap_or(true);
 
     base_result && not_result.not()
 }

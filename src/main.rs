@@ -35,7 +35,10 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
-fn find_files_in_directory_for_config(directory: &PathBuf, config: generated::RulesConfig) -> Vec<PathBuf> {
+fn find_files_in_directory_for_config(
+    directory: &PathBuf,
+    config: generated::RulesConfig,
+) -> Vec<PathBuf> {
     let initial_directories: Vec<PathBuf> = directory
         .read_dir()
         .unwrap()
