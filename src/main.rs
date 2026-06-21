@@ -10,6 +10,7 @@ use std::path::PathBuf;
 
 include!(concat!(env!("OUT_DIR"), "/codegen.rs"));
 
+#[serde_args::generate(version)]
 #[derive(Deserialize)]
 #[serde(expecting = "")]
 #[serde(rename_all = "kebab-case")]
