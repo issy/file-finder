@@ -69,8 +69,7 @@ fn find_files_in_directory_for_config(directory: &PathBuf, config: RulesConfig) 
             config
                 .rules
                 .iter()
-                .map(|rule| apply_rule(rule, path, &directory))
-                .all(|result| result)
+                .all(|rule| apply_rule(rule, path, directory))
         })
         .map(|path| path.strip_prefix(directory).unwrap().to_path_buf())
         .collect()

@@ -105,8 +105,8 @@ fn apply_base_rule(rule: &BaseRule, path: &PathBuf, relative_to: &PathBuf) -> bo
 }
 
 pub(crate) fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
-    let base_result = apply_base_rule(&BaseRule::from(rule), path, &relative_to);
-    let not_result = rule.not.as_ref().map(|not_rule| apply_base_rule(&not_rule, path, &relative_to)).unwrap_or(true);
+    let base_result = apply_base_rule(&BaseRule::from(rule), path, relative_to);
+    let not_result = rule.not.as_ref().map(|not_rule| apply_base_rule(not_rule, path, relative_to)).unwrap_or(true);
 
     base_result && not_result.not()
 }
