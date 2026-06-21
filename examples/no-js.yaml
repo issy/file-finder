@@ -1,0 +1,7 @@
+# Find all files in the src/views directory that do not have a .js extension
+rules:
+  - dirpath:
+      startswith: src/views
+    filename:
+      not:
+        endswith: .js
