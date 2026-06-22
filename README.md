@@ -40,18 +40,19 @@ Your rules file will look something like this
 
 ```yaml
 rules:
-  - filename:
-      endswith: Api.ts
-    dirpath:
-      startswith: src/views
-    content:
-      contains: "export default"
-  - filename:
-      endswith: .md
-    dirpath:
-      startswith: docs
-    content:
-      contains: "## Usage"
+  and:
+    - filename:
+        endswith: Api.ts
+      dirpath:
+        startswith: src/views
+      content:
+        contains: "export default"
+    - filename:
+        endswith: .md
+      dirpath:
+        startswith: docs
+      content:
+        contains: "## Usage"
 ```
 
 Check the examples directory for more examples of rules files. There is also a `schema.json` file which defines the rules schema, and can be used to validate your rules files. This can be useful in IDEs which support JSON schema validation, such as VSCode.
