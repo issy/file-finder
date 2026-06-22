@@ -6,7 +6,8 @@ mod generated {
 
 mod rule;
 
-use crate::rule::apply_rules;
+use crate::generated::RulesConfigRules;
+use crate::rule::{Context, apply_rule, apply_rules};
 use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use std::collections::VecDeque;
@@ -80,7 +81,13 @@ async fn find_files_in_directory_for_config(
         .map(|path| async {
             let rules = Arc::clone(&rules);
             async move {
-                if apply_rules(&rules, &path, directory).await {
+                let ctx = Context::new(&path, directory);
+                if match *rules {
+                    RulesConfigRules::Variant0(rule) => apply_rule(rule, &ctx).await,
+                    RulesConfigRules::Variant1(rule_combinator) => {
+                        apply_rules(rule_combinator, &ctx).await
+                    }
+                } {
                     return Some(path);
                 }
                 None

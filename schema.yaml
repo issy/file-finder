@@ -83,7 +83,9 @@ $defs:
     type: object
     properties:
       rules:
-        $ref: "#/$defs/RuleCombinator"
+        oneOf:
+          - $ref: "#/$defs/Rule"
+          - $ref: "#/$defs/RuleCombinator"
       exclude_dirs:
         type: array
         items:

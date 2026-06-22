@@ -7,14 +7,14 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-struct Context<'a> {
+pub(crate) struct Context<'a> {
     path: &'a PathBuf,
     relative_to: &'a PathBuf,
     content: OnceCell<Arc<String>>,
 }
 
 impl<'a> Context<'a> {
-    fn new(path: &'a PathBuf, relative_to: &'a PathBuf) -> Self {
+    pub(crate) fn new(path: &'a PathBuf, relative_to: &'a PathBuf) -> Self {
         Context {
             path,
             relative_to,
@@ -124,7 +124,7 @@ async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>
     }
 }
 
-async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
+pub(crate) async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
     match rule {
         Rule::Variant0 {
             filename,
@@ -150,17 +150,12 @@ async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
     }
 }
 
-pub(crate) async fn apply_rules(
-    rule_combinator: &RuleCombinator,
-    path: &PathBuf,
-    relative_to: &PathBuf,
-) -> bool {
-    let ctx = Context::new(path, relative_to);
+pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<'_>) -> bool {
     match rule_combinator {
         RuleCombinator::Variant0 { or } => {
             let rules_iter = or.iter();
             for rule in rules_iter {
-                if apply_rule(rule, &ctx).await {
+                if apply_rule(rule, ctx).await {
                     return true;
                 }
             }
@@ -170,7 +165,7 @@ pub(crate) async fn apply_rules(
             let rules_iter = xor.iter();
             let mut found_one = false;
             for rule in rules_iter {
-                if apply_rule(rule, &ctx).await {
+                if apply_rule(rule, ctx).await {
                     if found_one {
                         return false;
                     }
@@ -182,7 +177,7 @@ pub(crate) async fn apply_rules(
         RuleCombinator::Variant2 { and } => {
             let rules_iter = and.iter();
             for rule in rules_iter {
-                if !apply_rule(rule, &ctx).await {
+                if !apply_rule(rule, ctx).await {
                     return false;
                 }
             }
