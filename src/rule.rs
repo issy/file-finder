@@ -2,7 +2,7 @@ use crate::generated::{
     BaseRule, BaseRuleCombinator, NumberComparisonBaseRule, Rule, RuleCombinator,
     StringComparisonBaseRule,
 };
-use futures::{stream, StreamExt};
+use futures::{StreamExt, stream};
 use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
@@ -116,13 +116,13 @@ async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>
                 .any(|r| async move { r })
                 .await
         }
-        BaseRuleCombinator::Variant1 { xor } => {
-            stream::iter(xor)
-                .map(|rule| async move { apply_base_rule(&rule, ctx).await })
-                .buffer_unordered(32)
-                .filter(|r| futures::future::ready(*r))
-                .count().await.eq(&1)
-        }
+        BaseRuleCombinator::Variant1 { xor } => stream::iter(xor)
+            .map(|rule| async move { apply_base_rule(&rule, ctx).await })
+            .buffer_unordered(32)
+            .filter(|r| futures::future::ready(*r))
+            .count()
+            .await
+            .eq(&1),
         BaseRuleCombinator::Variant2 { and } => {
             stream::iter(and)
                 .map(|rule| async move { apply_base_rule(&rule, ctx).await })
@@ -170,13 +170,13 @@ pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<
                 .any(|r| async move { r })
                 .await
         }
-        RuleCombinator::Variant1 { xor } => {
-            stream::iter(xor)
-                .map(|rule| async move { apply_rule(rule, ctx).await })
-                .buffer_unordered(32)
-                .filter(|r| futures::future::ready(*r))
-                .count().await.eq(&1)
-        }
+        RuleCombinator::Variant1 { xor } => stream::iter(xor)
+            .map(|rule| async move { apply_rule(rule, ctx).await })
+            .buffer_unordered(32)
+            .filter(|r| futures::future::ready(*r))
+            .count()
+            .await
+            .eq(&1),
         RuleCombinator::Variant2 { and } => {
             stream::iter(and)
                 .map(|rule| async move { apply_rule(rule, ctx).await })
