@@ -1,4 +1,7 @@
-use crate::generated::{BaseRule, BaseRuleCombinator, NumberComparisonBaseRule, Rule, RuleCombinator, StringComparisonBaseRule};
+use crate::generated::{
+    BaseRule, BaseRuleCombinator, NumberComparisonBaseRule, Rule, RuleCombinator,
+    StringComparisonBaseRule,
+};
 use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
@@ -73,7 +76,7 @@ async fn apply_number_of_lines_rule(rule: NumberComparisonBaseRule, ctx: &Contex
     match rule {
         NumberComparisonBaseRule::LessThan(less_than) => number_of_lines < less_than,
         NumberComparisonBaseRule::GreaterThan(greater_than) => number_of_lines > greater_than,
-        NumberComparisonBaseRule::EqualTo(equal_to) => number_of_lines == equal_to
+        NumberComparisonBaseRule::EqualTo(equal_to) => number_of_lines == equal_to,
     }
 }
 
@@ -94,8 +97,10 @@ async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
     };
 
     let number_of_lines_result = match rule.number_of_lines.as_ref() {
-        Some(number_of_lines_rule) => apply_number_of_lines_rule(number_of_lines_rule.clone(), ctx).await,
-        None => true
+        Some(number_of_lines_rule) => {
+            apply_number_of_lines_rule(number_of_lines_rule.clone(), ctx).await
+        }
+        None => true,
     };
 
     dirpath_result && filename_result && content_result && number_of_lines_result
@@ -144,7 +149,8 @@ pub(crate) async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
             dirpath,
             content,
             not,
-            number_of_lines } => {
+            number_of_lines,
+        } => {
             let base_rule = BaseRule {
                 dirpath: dirpath.clone(),
                 content: content.clone(),
