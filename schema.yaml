@@ -17,22 +17,15 @@ $defs:
             type: string
         required:
           - equals
-  StringComparisonRule:
-    allOf:
-      - $ref: "#/$defs/StringComparisonBaseRule"
-      - type: object
-        properties:
-          not:
-            $ref: "#/$defs/StringComparisonBaseRule"
   BaseRule:
     type: object
     properties:
       dirpath:
-        $ref: "#/$defs/StringComparisonRule"
+        $ref: "#/$defs/StringComparisonBaseRule"
       filename:
-        $ref: "#/$defs/StringComparisonRule"
+        $ref: "#/$defs/StringComparisonBaseRule"
       content:
-        $ref: "#/$defs/StringComparisonRule"
+        $ref: "#/$defs/StringComparisonBaseRule"
   BaseRuleCombinator:
     oneOf:
       - type: object
