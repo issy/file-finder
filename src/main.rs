@@ -7,6 +7,7 @@ mod generated {
 mod rule;
 
 use crate::rule::apply_rule;
+use futures::future::join_all;
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::env::current_dir;
@@ -34,7 +35,7 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
-fn find_files_in_directory_for_config(
+async fn find_files_in_directory_for_config(
     directory: &PathBuf,
     config: generated::RulesConfig,
 ) -> Vec<PathBuf> {
@@ -70,19 +71,23 @@ fn find_files_in_directory_for_config(
         }
     }
 
-    all_files
-        .into_iter()
-        .filter(|path| {
-            config
-                .rules
-                .iter()
-                .all(|rule| apply_rule(rule, path, directory))
-        })
-        .map(|path| path.strip_prefix(directory).unwrap().to_path_buf())
-        .collect()
+    join_all(all_files.into_iter().map(|path| async {
+        let mut rules = config.rules.iter();
+        while let Some(rule) = rules.next() {
+            if !apply_rule(rule, &path, directory).await {
+                return None;
+            }
+        }
+        Some(path)
+    }))
+    .await
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Args = match serde_args::from_env() {
         Ok(args) => args,
         Err(error) => {
@@ -100,7 +105,7 @@ fn main() {
         .map(Result::unwrap)
         .unwrap_or(current_dir().unwrap());
 
-    let matched_files = find_files_in_directory_for_config(&directory, config);
+    let matched_files = find_files_in_directory_for_config(&directory, config).await;
 
     matched_files
         .into_iter()
