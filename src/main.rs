@@ -77,7 +77,8 @@ async fn find_files_in_directory_for_config(
                     return Some(path);
                 }
                 None
-            }.await
+            }
+            .await
         })
         .buffer_unordered(32)
         .collect::<Vec<_>>()
