@@ -49,7 +49,7 @@ async fn find_files_in_directory_for_config(
             path.is_file()
                 || config
                     .exclude_dirs
-                    .contains(&path.to_str().unwrap().to_string())
+                    .contains(&path.strip_prefix(directory).unwrap().to_str().unwrap().to_string())
                     .not()
         })
         .collect();

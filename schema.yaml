@@ -27,54 +27,58 @@ $defs:
       content:
         $ref: "#/$defs/StringComparisonBaseRule"
   BaseRuleCombinator:
+    type: object
+    properties:
+      or:
+        type: array
+        items:
+          $ref: "#/$defs/BaseRule"
+      xor:
+        type: array
+        items:
+          $ref: "#/$defs/BaseRule"
+      and:
+        type: array
+        items:
+          $ref: "#/$defs/BaseRule"
     oneOf:
-      - type: object
-        properties:
-          or:
-            type: array
-            items:
-              $ref: "#/$defs/BaseRule"
-      - type: object
-        properties:
-          xor:
-            type: array
-            items:
-              $ref: "#/$defs/BaseRule"
-      - type: object
-        properties:
-          and:
-            type: array
-            items:
-              $ref: "#/$defs/BaseRule"
+      - required:
+          - or
+      - required:
+          - xor
+      - required:
+          - and
   Rule:
     oneOf:
       - allOf:
-        - $ref: "#/$defs/BaseRule"
-        - type: object
-          properties:
-            not:
-              $ref: "#/$defs/BaseRule"
+          - $ref: "#/$defs/BaseRule"
+          - type: object
+            properties:
+              not:
+                $ref: "#/$defs/BaseRule"
       - $ref: "#/$defs/BaseRuleCombinator"
   RuleCombinator:
+    type: object
+    properties:
+      or:
+        type: array
+        items:
+          $ref: "#/$defs/Rule"
+      xor:
+        type: array
+        items:
+          $ref: "#/$defs/Rule"
+      and:
+        type: array
+        items:
+          $ref: "#/$defs/Rule"
     oneOf:
-      - type: object
-        properties:
-          or:
-            type: array
-            items:
-              $ref: "#/$defs/Rule"
-      - type: object
-        properties:
-          xor:
-            type: array
-            items:
-              $ref: "#/$defs/Rule"
-      - type: object
-        properties:
-          and:
-            type: array
-            items:
-              $ref: "#/$defs/Rule"
+      - required:
+          - or
+      - required:
+          - xor
+      - required:
+          - and
   RulesConfig:
     type: object
     properties:
