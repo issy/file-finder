@@ -94,13 +94,11 @@ async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
     };
 
     let number_of_lines_result = match rule.number_of_lines.as_ref() {
-        Some(number_of_lines_rule) => {
-
-        },
+        Some(number_of_lines_rule) => apply_number_of_lines_rule(number_of_lines_rule.clone(), ctx).await,
         None => true
     };
 
-    dirpath_result && filename_result && content_result
+    dirpath_result && filename_result && content_result && number_of_lines_result
 }
 
 async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>) -> bool {
