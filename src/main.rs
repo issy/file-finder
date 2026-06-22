@@ -49,7 +49,14 @@ async fn find_files_in_directory_for_config(
             path.is_file()
                 || config
                     .exclude_dirs
-                    .contains(&path.strip_prefix(directory).unwrap().to_str().unwrap().to_string())
+                    .contains(
+                        &path
+                            .strip_prefix(directory)
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .to_string(),
+                    )
                     .not()
         })
         .collect();
@@ -109,7 +116,24 @@ async fn main() {
 
     let matched_files = find_files_in_directory_for_config(&directory, config).await;
 
-    matched_files
-        .into_iter()
-        .for_each(|path| println!("{}", path.display()));
+    let mut matched_files_relative = matched_files
+        .iter()
+        .map(|path| path.strip_prefix(&directory).unwrap().to_path_buf())
+        .collect::<Vec<_>>();
+    matched_files_relative.sort_by(|a, b| {
+        let a_root = a.parent().is_none() || a.parent().unwrap().as_os_str().is_empty();
+        let b_root = b.parent().is_none() || b.parent().unwrap().as_os_str().is_empty();
+
+        if a_root && !b_root {
+            std::cmp::Ordering::Greater
+        } else if !a_root && b_root {
+            std::cmp::Ordering::Less
+        } else {
+            a.cmp(b)
+        }
+    });
+
+    matched_files_relative.into_iter().for_each(|path| {
+        println!("{}", path.display());
+    });
 }

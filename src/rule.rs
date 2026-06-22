@@ -54,6 +54,7 @@ async fn apply_dirpath_rule(rule: StringComparisonBaseRule, ctx: &Context<'_>) -
                 .unwrap()
                 .to_string()
         })
+        .map(|path| if path.is_empty() { path } else { path + "/" })
         .unwrap_or("".into());
     apply_string_comparison_base_rule(rule, dirpath)
 }
