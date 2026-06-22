@@ -1,7 +1,31 @@
 use crate::generated::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
+use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
 use std::path::PathBuf;
+use std::sync::Arc;
+
+struct Context<'a> {
+    path: &'a PathBuf,
+    relative_to: &'a PathBuf,
+    content: OnceCell<Arc<String>>,
+}
+
+impl<'a> Context<'a> {
+    fn new(path: &'a PathBuf, relative_to: &'a PathBuf) -> Self {
+        Context {
+            path,
+            relative_to,
+            content: OnceCell::new(),
+        }
+    }
+
+    async fn get_content(&self) -> Arc<String> {
+        self.content
+            .get_or_init(|| Arc::from(read_to_string(&self.path).unwrap().to_string()))
+            .clone()
+    }
+}
 
 impl From<&Rule> for BaseRule {
     fn from(rule: &Rule) -> Self {
@@ -28,7 +52,7 @@ fn apply_string_comparison_base_rule(rule: StringComparisonBaseRule, value: Stri
     }
 }
 
-fn apply_string_comparison_rule(rule: StringComparisonRule, value: String) -> bool {
+async fn apply_string_comparison_rule(rule: StringComparisonRule, value: &String) -> bool {
     match rule {
         StringComparisonRule::Variant0 {
             startswith,
@@ -44,9 +68,10 @@ fn apply_string_comparison_rule(rule: StringComparisonRule, value: String) -> bo
                 },
                 value.clone(),
             );
-            let negative_section = not
-                .map(|not_rule| apply_string_comparison_base_rule(not_rule, value.clone()).not())
-                .unwrap_or(true);
+            let negative_section = match not {
+                Some(not_rule) => apply_string_comparison_base_rule(not_rule, value.clone()).not(),
+                None => true,
+            };
             positive_section && negative_section
         }
         StringComparisonRule::Variant1 { equals, not } => {
@@ -62,66 +87,59 @@ fn apply_string_comparison_rule(rule: StringComparisonRule, value: String) -> bo
     }
 }
 
-fn apply_dirpath_rule(rule: StringComparisonRule, dirpath: String) -> bool {
-    apply_string_comparison_rule(rule, dirpath)
-}
-
-fn apply_filename_rule(rule: StringComparisonRule, filename: String) -> bool {
-    apply_string_comparison_rule(rule, filename)
-}
-
-fn apply_content_rule(rule: StringComparisonRule, path: &PathBuf) -> bool {
-    let content = read_to_string(path).unwrap().to_string();
-    apply_string_comparison_rule(rule, content)
-}
-
-fn apply_base_rule(rule: &BaseRule, path: &PathBuf, relative_to: &PathBuf) -> bool {
-    let dirpath_result = rule
-        .dirpath
-        .as_ref()
-        .map(|dirpath_rule| {
-            apply_dirpath_rule(
-                dirpath_rule.clone(),
-                path.parent()
-                    .map(|p| {
-                        p.strip_prefix(relative_to)
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .to_string()
-                    })
-                    .unwrap_or("".into()),
-            )
+async fn apply_dirpath_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bool {
+    let dirpath = ctx
+        .path
+        .parent()
+        .map(|p| {
+            p.strip_prefix(ctx.relative_to)
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_string()
         })
-        .unwrap_or(true);
+        .unwrap_or("".into());
+    apply_string_comparison_rule(rule, &dirpath).await
+}
 
-    let filename_result = rule
-        .filename
-        .as_ref()
-        .map(|filename_rule| {
-            apply_filename_rule(
-                filename_rule.clone(),
-                path.file_name().unwrap().to_str().unwrap().to_string(),
-            )
-        })
-        .unwrap_or(true);
+async fn apply_filename_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bool {
+    let filename = ctx.path.file_name().unwrap().to_str().unwrap().to_string();
+    apply_string_comparison_rule(rule, &filename).await
+}
 
-    let content_result = rule
-        .content
-        .as_ref()
-        .map(|content_rule| apply_content_rule(content_rule.clone(), path))
-        .unwrap_or(true);
+async fn apply_content_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bool {
+    let content = ctx.get_content().await;
+    apply_string_comparison_rule(rule, &*content).await
+}
+
+async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
+    let dirpath_result = match rule.dirpath.as_ref() {
+        Some(dirpath_rule) => apply_dirpath_rule(dirpath_rule.clone(), ctx).await,
+        None => true,
+    };
+
+    let filename_result = match rule.filename.as_ref() {
+        Some(filename_rule) => apply_filename_rule(filename_rule.clone(), ctx).await,
+        None => true,
+    };
+
+    let content_result = match rule.content.as_ref() {
+        Some(content_rule) => apply_content_rule(content_rule.clone(), ctx).await,
+        None => true,
+    };
 
     dirpath_result && filename_result && content_result
 }
 
-pub(crate) fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
-    let base_result = apply_base_rule(&BaseRule::from(rule), path, relative_to);
-    let not_result = rule
-        .not
-        .as_ref()
-        .map(|not_rule| apply_base_rule(not_rule, path, relative_to))
-        .unwrap_or(true);
+pub(crate) async fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
+    let ctx = Context::new(path, relative_to);
 
-    base_result && not_result.not()
+    let base_result = apply_base_rule(&BaseRule::from(rule), &ctx).await;
+
+    let not_result = match rule.not.as_ref() {
+        Some(not_rule) => apply_base_rule(not_rule, &ctx).await.not(),
+        None => true,
+    };
+
+    base_result && not_result
 }
