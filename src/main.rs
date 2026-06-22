@@ -34,7 +34,7 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
-fn find_files_in_directory_for_config(
+async fn find_files_in_directory_for_config(
     directory: &PathBuf,
     config: generated::RulesConfig,
 ) -> Vec<PathBuf> {
@@ -101,7 +101,7 @@ async fn main() {
         .map(Result::unwrap)
         .unwrap_or(current_dir().unwrap());
 
-    let matched_files = find_files_in_directory_for_config(&directory, config);
+    let matched_files = find_files_in_directory_for_config(&directory, config).await;
 
     matched_files
         .into_iter()
