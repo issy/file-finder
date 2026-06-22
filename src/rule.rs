@@ -2,6 +2,7 @@ use crate::generated::{
     BaseRule, BaseRuleCombinator, NumberComparisonBaseRule, Rule, RuleCombinator,
     StringComparisonBaseRule,
 };
+use futures::{StreamExt, stream};
 use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
@@ -131,13 +132,11 @@ async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>
             found_one
         }
         BaseRuleCombinator::Variant2 { and } => {
-            let rules_iter = and.iter();
-            for rule in rules_iter {
-                if !apply_base_rule(rule, ctx).await {
-                    return false;
-                }
-            }
-            true
+            stream::iter(and)
+                .map(|rule| async move { apply_base_rule(&rule, ctx).await })
+                .buffer_unordered(32)
+                .all(|r| async move { r })
+                .await
         }
     }
 }
@@ -195,13 +194,11 @@ pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<
             found_one
         }
         RuleCombinator::Variant2 { and } => {
-            let rules_iter = and.iter();
-            for rule in rules_iter {
-                if !apply_rule(rule, ctx).await {
-                    return false;
-                }
-            }
-            true
+            stream::iter(and)
+                .map(|rule| async move { apply_rule(&rule, ctx).await })
+                .buffer_unordered(32)
+                .all(|r| async move { r })
+                .await
         }
     }
 }
