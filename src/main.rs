@@ -6,7 +6,7 @@ mod generated {
 
 mod rule;
 
-use crate::rule::apply_rule;
+use crate::rule::apply_rules;
 use futures::future::join_all;
 use serde::Deserialize;
 use std::collections::VecDeque;
@@ -72,13 +72,10 @@ async fn find_files_in_directory_for_config(
     }
 
     join_all(all_files.into_iter().map(|path| async {
-        let mut rules = config.rules.iter();
-        while let Some(rule) = rules.next() {
-            if !apply_rule(rule, &path, directory).await {
-                return None;
-            }
+        if apply_rules(config.clone().rules, &path, directory).await {
+            return Some(path);
         }
-        Some(path)
+        None
     }))
     .await
     .into_iter()

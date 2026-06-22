@@ -1,4 +1,7 @@
-use crate::generated::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
+use crate::generated::{
+    BaseRule, BaseRuleCombinator, Rule, RuleCombinator, StringComparisonBaseRule,
+    StringComparisonRule,
+};
 use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
@@ -24,16 +27,6 @@ impl<'a> Context<'a> {
         self.content
             .get_or_init(|| Arc::from(read_to_string(&self.path).unwrap().to_string()))
             .clone()
-    }
-}
-
-impl From<&Rule> for BaseRule {
-    fn from(rule: &Rule) -> Self {
-        BaseRule {
-            dirpath: rule.dirpath.clone(),
-            filename: rule.filename.clone(),
-            content: rule.content.clone(),
-        }
     }
 }
 
@@ -131,15 +124,105 @@ async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
     dirpath_result && filename_result && content_result
 }
 
-pub(crate) async fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
+async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>) -> bool {
+    match rule_combinator {
+        BaseRuleCombinator::Variant0 { or } => {
+            let mut rules_iter = or.iter();
+            while let Some(rule) = rules_iter.next() {
+                if apply_base_rule(rule, ctx).await {
+                    return true;
+                }
+            }
+            false
+        }
+        BaseRuleCombinator::Variant1 { xor } => {
+            let mut rules_iter = xor.iter();
+            let mut found_one = false;
+            while let Some(rule) = rules_iter.next() {
+                if apply_base_rule(rule, ctx).await {
+                    if found_one {
+                        return false;
+                    }
+                    found_one = true;
+                }
+            }
+            found_one
+        }
+        BaseRuleCombinator::Variant2 { and } => {
+            let mut rules_iter = and.iter();
+            while let Some(rule) = rules_iter.next() {
+                if !apply_base_rule(rule, ctx).await {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
+    match rule {
+        Rule::Variant0 {
+            filename,
+            dirpath,
+            content,
+            not,
+        } => {
+            let base_rule = BaseRule {
+                dirpath: dirpath.clone(),
+                content: content.clone(),
+                filename: filename.clone(),
+            };
+            let base_result = apply_base_rule(&base_rule, ctx).await;
+            let not_result = match not.as_ref() {
+                Some(not_rule) => apply_base_rule(not_rule, ctx).await.not(),
+                None => true,
+            };
+            base_result && not_result
+        }
+        Rule::Variant1(base_rule_combinator) => {
+            apply_base_rules(base_rule_combinator.clone(), ctx).await
+        }
+    }
+}
+
+pub(crate) async fn apply_rules(
+    rule_combinator: RuleCombinator,
+    path: &PathBuf,
+    relative_to: &PathBuf,
+) -> bool {
     let ctx = Context::new(path, relative_to);
-
-    let base_result = apply_base_rule(&BaseRule::from(rule), &ctx).await;
-
-    let not_result = match rule.not.as_ref() {
-        Some(not_rule) => apply_base_rule(not_rule, &ctx).await.not(),
-        None => true,
-    };
-
-    base_result && not_result
+    match rule_combinator {
+        RuleCombinator::Variant0 { or } => {
+            let mut rules_iter = or.iter();
+            while let Some(rule) = rules_iter.next() {
+                if apply_rule(rule, &ctx).await {
+                    return true;
+                }
+            }
+            false
+        }
+        RuleCombinator::Variant1 { xor } => {
+            let mut rules_iter = xor.iter();
+            let mut found_one = false;
+            while let Some(rule) = rules_iter.next() {
+                if apply_rule(rule, &ctx).await {
+                    if found_one {
+                        return false;
+                    }
+                    found_one = true;
+                }
+            }
+            found_one
+        }
+        RuleCombinator::Variant2 { and } => {
+            let mut rules_iter = and.iter();
+            while let Some(rule) = rules_iter.next() {
+                if !apply_rule(rule, &ctx).await {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }

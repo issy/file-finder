@@ -1,7 +1,21 @@
 # Find all files in the src/views directory that do not have a .js extension
 rules:
-  - dirpath:
-      startswith: src/views
-    filename:
-      not:
-        endswith: .js
+  and:
+    - dirpath:
+        startswith: src/views
+      filename:
+        not:
+          endswith: .js
+
+    - or:
+      - filename:
+          endswith: .ts
+      - filename:
+          endswith: .jsx
+      - filename:
+          endswith: .tsx
+      - dirpath:
+          startswith: src/views
+        filename:
+          not:
+            endswith: .js

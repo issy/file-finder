@@ -29,7 +29,6 @@ dependencies = [
  "schemars",
  "serde",
  "serde_args",
- "serde_json",
  "serde_yaml_ng",
  "syn",
  "tokio",
