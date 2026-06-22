@@ -17,6 +17,26 @@ $defs:
             type: string
         required:
           - equals
+  NumberComparisonBaseRule:
+    oneOf:
+      - type: object
+        properties:
+          greater_than:
+            type: integer
+        required:
+          - greater_than
+      - type: object
+        properties:
+          less_than:
+            type: integer
+        required:
+          - less_than
+      - type: object
+        properties:
+          equal_to:
+            type: integer
+        required:
+          - equal_to
   BaseRule:
     type: object
     properties:
@@ -26,6 +46,8 @@ $defs:
         $ref: "#/$defs/StringComparisonBaseRule"
       content:
         $ref: "#/$defs/StringComparisonBaseRule"
+      number_of_lines:
+        $ref: "#/$defs/NumberComparisonBaseRule"
   BaseRuleCombinator:
     type: object
     properties:
