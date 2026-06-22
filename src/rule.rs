@@ -2,7 +2,7 @@ use crate::generated::{
     BaseRule, BaseRuleCombinator, NumberComparisonBaseRule, Rule, RuleCombinator,
     StringComparisonBaseRule,
 };
-use futures::{StreamExt, stream};
+use futures::{stream, StreamExt};
 use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
@@ -110,13 +110,11 @@ async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
 async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>) -> bool {
     match rule_combinator {
         BaseRuleCombinator::Variant0 { or } => {
-            let rules_iter = or.iter();
-            for rule in rules_iter {
-                if apply_base_rule(rule, ctx).await {
-                    return true;
-                }
-            }
-            false
+            stream::iter(or)
+                .map(|rule| async move { apply_base_rule(&rule, ctx).await })
+                .buffer_unordered(32)
+                .any(|r| async move { r })
+                .await
         }
         BaseRuleCombinator::Variant1 { xor } => {
             let rules_iter = xor.iter();
@@ -172,13 +170,11 @@ pub(crate) async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
 pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<'_>) -> bool {
     match rule_combinator {
         RuleCombinator::Variant0 { or } => {
-            let rules_iter = or.iter();
-            for rule in rules_iter {
-                if apply_rule(rule, ctx).await {
-                    return true;
-                }
-            }
-            false
+            stream::iter(or)
+                .map(|rule| async move { apply_rule(rule, ctx).await })
+                .buffer_unordered(32)
+                .any(|r| async move { r })
+                .await
         }
         RuleCombinator::Variant1 { xor } => {
             let rules_iter = xor.iter();
@@ -195,7 +191,7 @@ pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<
         }
         RuleCombinator::Variant2 { and } => {
             stream::iter(and)
-                .map(|rule| async move { apply_rule(&rule, ctx).await })
+                .map(|rule| async move { apply_rule(rule, ctx).await })
                 .buffer_unordered(32)
                 .all(|r| async move { r })
                 .await
