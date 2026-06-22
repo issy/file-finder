@@ -82,7 +82,8 @@ fn find_files_in_directory_for_config(
         .collect()
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Args = match serde_args::from_env() {
         Ok(args) => args,
         Err(error) => {
