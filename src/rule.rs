@@ -117,17 +117,11 @@ async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>
                 .await
         }
         BaseRuleCombinator::Variant1 { xor } => {
-            let rules_iter = xor.iter();
-            let mut found_one = false;
-            for rule in rules_iter {
-                if apply_base_rule(rule, ctx).await {
-                    if found_one {
-                        return false;
-                    }
-                    found_one = true;
-                }
-            }
-            found_one
+            stream::iter(xor)
+                .map(|rule| async move { apply_base_rule(&rule, ctx).await })
+                .buffer_unordered(32)
+                .filter(|r| futures::future::ready(*r))
+                .count().await.eq(&1)
         }
         BaseRuleCombinator::Variant2 { and } => {
             stream::iter(and)
@@ -177,17 +171,11 @@ pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<
                 .await
         }
         RuleCombinator::Variant1 { xor } => {
-            let rules_iter = xor.iter();
-            let mut found_one = false;
-            for rule in rules_iter {
-                if apply_rule(rule, ctx).await {
-                    if found_one {
-                        return false;
-                    }
-                    found_one = true;
-                }
-            }
-            found_one
+            stream::iter(xor)
+                .map(|rule| async move { apply_rule(rule, ctx).await })
+                .buffer_unordered(32)
+                .filter(|r| futures::future::ready(*r))
+                .count().await.eq(&1)
         }
         RuleCombinator::Variant2 { and } => {
             stream::iter(and)
