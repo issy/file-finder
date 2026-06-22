@@ -1,0 +1,89 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$ref: "#/$defs/RulesConfig"
+$defs:
+  StringComparisonBaseRule:
+    oneOf:
+      - type: object
+        properties:
+          startswith:
+            type: string
+          endswith:
+            type: string
+          contains:
+            type: string
+      - type: object
+        properties:
+          equals:
+            type: string
+        required:
+          - equals
+  BaseRule:
+    type: object
+    properties:
+      dirpath:
+        $ref: "#/$defs/StringComparisonBaseRule"
+      filename:
+        $ref: "#/$defs/StringComparisonBaseRule"
+      content:
+        $ref: "#/$defs/StringComparisonBaseRule"
+  BaseRuleCombinator:
+    oneOf:
+      - type: object
+        properties:
+          or:
+            type: array
+            items:
+              $ref: "#/$defs/BaseRule"
+      - type: object
+        properties:
+          xor:
+            type: array
+            items:
+              $ref: "#/$defs/BaseRule"
+      - type: object
+        properties:
+          and:
+            type: array
+            items:
+              $ref: "#/$defs/BaseRule"
+  Rule:
+    oneOf:
+      - allOf:
+        - $ref: "#/$defs/BaseRule"
+        - type: object
+          properties:
+            not:
+              $ref: "#/$defs/BaseRule"
+      - $ref: "#/$defs/BaseRuleCombinator"
+  RuleCombinator:
+    oneOf:
+      - type: object
+        properties:
+          or:
+            type: array
+            items:
+              $ref: "#/$defs/Rule"
+      - type: object
+        properties:
+          xor:
+            type: array
+            items:
+              $ref: "#/$defs/Rule"
+      - type: object
+        properties:
+          and:
+            type: array
+            items:
+              $ref: "#/$defs/Rule"
+  RulesConfig:
+    type: object
+    properties:
+      rules:
+        $ref: "#/$defs/RuleCombinator"
+      exclude_dirs:
+        type: array
+        items:
+          type: string
+    required:
+      - rules
+    additionalProperties: false

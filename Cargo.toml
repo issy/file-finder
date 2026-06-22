@@ -3,22 +3,25 @@ name = "file-finder"
 description = "CLI to find files in a directory tree based on various criteria"
 homepage = "https://github.com/issy/file-finder"
 repository = "https://github.com/issy/file-finder"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
 serde_args = { version = "0.2.0" }
-serde_yaml_ng = { version = "0.10.0" }
+serde_yaml_ng = { workspace = true }
 tokio = { version = "1.52.3", features = ["default", "rt", "rt-multi-thread", "macros"] }
 futures = { version = "0.3.32" }
 
 [build-dependencies]
 typify = { version = "0.7.0" }
-serde_json = { version = "1.0.150" }
+serde_yaml_ng = { workspace = true }
 schemars = { version = "0.8.22" }
 prettyplease = { version = "0.2.37" }
 syn = { version = "2.0.118" }
+
+[workspace.dependencies]
+serde_yaml_ng = { version = "0.10.0" }
 
 [profile.dist]
 inherits = "release"

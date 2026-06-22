@@ -6,14 +6,15 @@ mod generated {
 
 mod rule;
 
-use crate::rule::apply_rule;
-use futures::future::join_all;
+use crate::rule::apply_rules;
+use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use std::collections::VecDeque;
 use std::env::current_dir;
 use std::fs::File;
 use std::ops::Not;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 #[serde_args::generate(version)]
 #[derive(Deserialize)]
@@ -39,7 +40,8 @@ async fn find_files_in_directory_for_config(
     directory: &PathBuf,
     config: generated::RulesConfig,
 ) -> Vec<PathBuf> {
-    let initial_directories: Vec<PathBuf> = directory
+    let mut all_files: Vec<PathBuf> = Vec::new();
+    let mut to_explore: VecDeque<PathBuf> = directory
         .read_dir()
         .unwrap()
         .map(|e| e.unwrap().path())
@@ -52,12 +54,6 @@ async fn find_files_in_directory_for_config(
         })
         .collect();
 
-    initial_directories
-        .iter()
-        .for_each(|path| println!("{}", path.display()));
-
-    let mut all_files: Vec<PathBuf> = Vec::new();
-    let mut to_explore: VecDeque<PathBuf> = VecDeque::from(initial_directories.clone());
     while !to_explore.is_empty() {
         let current_path = to_explore.pop_front().unwrap();
         if current_path.is_file() {
@@ -71,19 +67,25 @@ async fn find_files_in_directory_for_config(
         }
     }
 
-    join_all(all_files.into_iter().map(|path| async {
-        let mut rules = config.rules.iter();
-        while let Some(rule) = rules.next() {
-            if !apply_rule(rule, &path, directory).await {
-                return None;
+    let rules = Arc::new(&config.rules);
+
+    stream::iter(all_files)
+        .map(|path| async {
+            let rules = Arc::clone(&rules);
+            async move {
+                if apply_rules(&rules, &path, directory).await {
+                    return Some(path);
+                }
+                None
             }
-        }
-        Some(path)
-    }))
-    .await
-    .into_iter()
-    .flatten()
-    .collect()
+            .await
+        })
+        .buffer_unordered(32)
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .flatten()
+        .collect()
 }
 
 #[tokio::main]

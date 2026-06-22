@@ -2,9 +2,9 @@ use std::{env, fs, path::Path};
 use typify::{TypeSpace, TypeSpaceSettings};
 
 fn main() {
-    println!("cargo:rerun-if-changed=schema.json");
-    let content = fs::read_to_string("./schema.json").unwrap();
-    let schema = serde_json::from_str::<schemars::schema::RootSchema>(&content).unwrap();
+    println!("cargo:rerun-if-changed=schema.yaml");
+    let content = fs::read_to_string("./schema.yaml").unwrap();
+    let schema = serde_yaml_ng::from_str::<schemars::schema::RootSchema>(&content).unwrap();
 
     let mut type_space = TypeSpace::new(TypeSpaceSettings::default().with_struct_builder(true));
     type_space.add_root_schema(schema).unwrap();

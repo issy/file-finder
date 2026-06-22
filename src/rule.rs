@@ -1,4 +1,6 @@
-use crate::generated::{BaseRule, Rule, StringComparisonBaseRule, StringComparisonRule};
+use crate::generated::{
+    BaseRule, BaseRuleCombinator, Rule, RuleCombinator, StringComparisonBaseRule,
+};
 use std::cell::OnceCell;
 use std::fs::read_to_string;
 use std::ops::Not;
@@ -20,20 +22,9 @@ impl<'a> Context<'a> {
         }
     }
 
-    async fn get_content(&self) -> Arc<String> {
+    async fn get_content(&self) -> &String {
         self.content
-            .get_or_init(|| Arc::from(read_to_string(&self.path).unwrap().to_string()))
-            .clone()
-    }
-}
-
-impl From<&Rule> for BaseRule {
-    fn from(rule: &Rule) -> Self {
-        BaseRule {
-            dirpath: rule.dirpath.clone(),
-            filename: rule.filename.clone(),
-            content: rule.content.clone(),
-        }
+            .get_or_init(|| Arc::from(read_to_string(self.path).unwrap().to_string()))
     }
 }
 
@@ -52,42 +43,7 @@ fn apply_string_comparison_base_rule(rule: StringComparisonBaseRule, value: Stri
     }
 }
 
-async fn apply_string_comparison_rule(rule: StringComparisonRule, value: &String) -> bool {
-    match rule {
-        StringComparisonRule::Variant0 {
-            startswith,
-            contains,
-            endswith,
-            not,
-        } => {
-            let positive_section = apply_string_comparison_base_rule(
-                StringComparisonBaseRule::Variant0 {
-                    startswith,
-                    contains,
-                    endswith,
-                },
-                value.clone(),
-            );
-            let negative_section = match not {
-                Some(not_rule) => apply_string_comparison_base_rule(not_rule, value.clone()).not(),
-                None => true,
-            };
-            positive_section && negative_section
-        }
-        StringComparisonRule::Variant1 { equals, not } => {
-            let positive_section = apply_string_comparison_base_rule(
-                StringComparisonBaseRule::Variant1 { equals },
-                value.clone(),
-            );
-            let negative_section = not
-                .map(|not_rule| apply_string_comparison_base_rule(not_rule, value.clone()).not())
-                .unwrap_or(true);
-            positive_section && negative_section
-        }
-    }
-}
-
-async fn apply_dirpath_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bool {
+async fn apply_dirpath_rule(rule: StringComparisonBaseRule, ctx: &Context<'_>) -> bool {
     let dirpath = ctx
         .path
         .parent()
@@ -99,17 +55,17 @@ async fn apply_dirpath_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bo
                 .to_string()
         })
         .unwrap_or("".into());
-    apply_string_comparison_rule(rule, &dirpath).await
+    apply_string_comparison_base_rule(rule, dirpath)
 }
 
-async fn apply_filename_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bool {
+async fn apply_filename_rule(rule: StringComparisonBaseRule, ctx: &Context<'_>) -> bool {
     let filename = ctx.path.file_name().unwrap().to_str().unwrap().to_string();
-    apply_string_comparison_rule(rule, &filename).await
+    apply_string_comparison_base_rule(rule, filename)
 }
 
-async fn apply_content_rule(rule: StringComparisonRule, ctx: &Context<'_>) -> bool {
+async fn apply_content_rule(rule: StringComparisonBaseRule, ctx: &Context<'_>) -> bool {
     let content = ctx.get_content().await;
-    apply_string_comparison_rule(rule, &*content).await
+    apply_string_comparison_base_rule(rule, content.clone())
 }
 
 async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
@@ -131,15 +87,105 @@ async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
     dirpath_result && filename_result && content_result
 }
 
-pub(crate) async fn apply_rule(rule: &Rule, path: &PathBuf, relative_to: &PathBuf) -> bool {
+async fn apply_base_rules(rule_combinator: BaseRuleCombinator, ctx: &Context<'_>) -> bool {
+    match rule_combinator {
+        BaseRuleCombinator::Variant0 { or } => {
+            let rules_iter = or.iter();
+            for rule in rules_iter {
+                if apply_base_rule(rule, ctx).await {
+                    return true;
+                }
+            }
+            false
+        }
+        BaseRuleCombinator::Variant1 { xor } => {
+            let rules_iter = xor.iter();
+            let mut found_one = false;
+            for rule in rules_iter {
+                if apply_base_rule(rule, ctx).await {
+                    if found_one {
+                        return false;
+                    }
+                    found_one = true;
+                }
+            }
+            found_one
+        }
+        BaseRuleCombinator::Variant2 { and } => {
+            let rules_iter = and.iter();
+            for rule in rules_iter {
+                if !apply_base_rule(rule, ctx).await {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
+    match rule {
+        Rule::Variant0 {
+            filename,
+            dirpath,
+            content,
+            not,
+        } => {
+            let base_rule = BaseRule {
+                dirpath: dirpath.clone(),
+                content: content.clone(),
+                filename: filename.clone(),
+            };
+            let base_result = apply_base_rule(&base_rule, ctx).await;
+            let not_result = match not.as_ref() {
+                Some(not_rule) => apply_base_rule(not_rule, ctx).await.not(),
+                None => true,
+            };
+            base_result && not_result
+        }
+        Rule::Variant1(base_rule_combinator) => {
+            apply_base_rules(base_rule_combinator.clone(), ctx).await
+        }
+    }
+}
+
+pub(crate) async fn apply_rules(
+    rule_combinator: &RuleCombinator,
+    path: &PathBuf,
+    relative_to: &PathBuf,
+) -> bool {
     let ctx = Context::new(path, relative_to);
-
-    let base_result = apply_base_rule(&BaseRule::from(rule), &ctx).await;
-
-    let not_result = match rule.not.as_ref() {
-        Some(not_rule) => apply_base_rule(not_rule, &ctx).await.not(),
-        None => true,
-    };
-
-    base_result && not_result
+    match rule_combinator {
+        RuleCombinator::Variant0 { or } => {
+            let rules_iter = or.iter();
+            for rule in rules_iter {
+                if apply_rule(rule, &ctx).await {
+                    return true;
+                }
+            }
+            false
+        }
+        RuleCombinator::Variant1 { xor } => {
+            let rules_iter = xor.iter();
+            let mut found_one = false;
+            for rule in rules_iter {
+                if apply_rule(rule, &ctx).await {
+                    if found_one {
+                        return false;
+                    }
+                    found_one = true;
+                }
+            }
+            found_one
+        }
+        RuleCombinator::Variant2 { and } => {
+            let rules_iter = and.iter();
+            for rule in rules_iter {
+                if !apply_rule(rule, &ctx).await {
+                    return false;
+                }
+            }
+            true
+        }
+    }
 }
