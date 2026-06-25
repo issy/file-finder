@@ -7,10 +7,13 @@ $defs:
         properties:
           startswith:
             type: string
+            minLength: 1
           endswith:
             type: string
+            minLength: 1
           contains:
             type: string
+            minLength: 1
       - type: object
         properties:
           equals:
@@ -112,6 +115,7 @@ $defs:
         type: array
         items:
           type: string
+          minLength: 1
     required:
       - rules
     additionalProperties: false

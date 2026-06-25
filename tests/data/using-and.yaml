@@ -1,0 +1,9 @@
+rules:
+  and:
+    - filename:
+        endswith: .txt
+    - content:
+        contains: hello
+    - not:
+        content:
+          contains: world

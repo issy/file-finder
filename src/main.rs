@@ -15,6 +15,7 @@ use std::env::current_dir;
 use std::fs::File;
 use std::ops::Not;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[serde_args::generate(version)]
@@ -51,12 +52,10 @@ async fn find_files_in_directory_for_config(
                 || config
                     .exclude_dirs
                     .contains(
-                        &path
-                            .strip_prefix(directory)
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .to_string(),
+                        &generated::RulesConfigExcludeDirsItem::from_str(
+                            path.strip_prefix(directory).unwrap().to_str().unwrap(),
+                        )
+                        .unwrap(),
                     )
                     .not()
         })

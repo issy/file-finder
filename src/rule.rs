@@ -37,9 +37,9 @@ fn apply_string_comparison_base_rule(rule: StringComparisonBaseRule, value: Stri
             contains,
             endswith,
         } => {
-            startswith.map(|s| value.starts_with(&s)).unwrap_or(true)
-                && contains.map(|c| value.contains(&c)).unwrap_or(true)
-                && endswith.map(|e| value.ends_with(&e)).unwrap_or(true)
+            startswith.map(|s| value.starts_with(&*s)).unwrap_or(true)
+                && contains.map(|c| value.contains(&*c)).unwrap_or(true)
+                && endswith.map(|e| value.ends_with(&*e)).unwrap_or(true)
         }
         StringComparisonBaseRule::Variant1 { equals } => value.eq(&equals),
     }
