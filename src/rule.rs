@@ -9,6 +9,8 @@ use std::ops::Not;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+pub(crate) const BUFFER_SIZE: usize = 32;
+
 pub(crate) struct Context<'a> {
     path: &'a PathBuf,
     relative_to: &'a PathBuf,
@@ -109,21 +111,21 @@ async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
 
 async fn apply_base_rules(rule_combinator: &BaseRuleCombinator, ctx: &Context<'_>) -> bool {
     let result_stream = stream::iter(match rule_combinator {
-        BaseRuleCombinator::Variant0 { or } => or,
-        BaseRuleCombinator::Variant1 { xor } => xor,
-        BaseRuleCombinator::Variant2 { and } => and,
+        BaseRuleCombinator::Or(rules)
+        | BaseRuleCombinator::Xor(rules)
+        | BaseRuleCombinator::And(rules) => rules,
     })
     .map(|rule| async move { apply_base_rule(rule, ctx).await })
-    .buffer_unordered(32);
+    .buffer_unordered(BUFFER_SIZE);
 
     match rule_combinator {
-        BaseRuleCombinator::Variant0 { .. } => result_stream.any(|r| async move { r }).await,
-        BaseRuleCombinator::Variant1 { .. } => result_stream
+        BaseRuleCombinator::Or(_) => result_stream.any(|r| async move { r }).await,
+        BaseRuleCombinator::Xor(_) => result_stream
             .filter(|r| futures::future::ready(*r))
             .count()
             .await
             .eq(&1),
-        BaseRuleCombinator::Variant2 { .. } => result_stream.all(|r| async move { r }).await,
+        BaseRuleCombinator::And(_) => result_stream.all(|r| async move { r }).await,
     }
 }
 
@@ -155,20 +157,20 @@ pub(crate) async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
 
 pub(crate) async fn apply_rules(rule_combinator: &RuleCombinator, ctx: &Context<'_>) -> bool {
     let result_stream = stream::iter(match rule_combinator {
-        RuleCombinator::Variant0 { or } => or,
-        RuleCombinator::Variant1 { xor } => xor,
-        RuleCombinator::Variant2 { and } => and,
+        RuleCombinator::Or(rules) | RuleCombinator::Xor(rules) | RuleCombinator::And(rules) => {
+            rules
+        }
     })
     .map(|rule| async move { apply_rule(rule, ctx).await })
-    .buffer_unordered(32);
+    .buffer_unordered(BUFFER_SIZE);
 
     match rule_combinator {
-        RuleCombinator::Variant0 { .. } => result_stream.any(|r| async move { r }).await,
-        RuleCombinator::Variant1 { .. } => result_stream
+        RuleCombinator::Or(_) => result_stream.any(|r| async move { r }).await,
+        RuleCombinator::Xor(_) => result_stream
             .filter(|r| futures::future::ready(*r))
             .count()
             .await
             .eq(&1),
-        RuleCombinator::Variant2 { .. } => result_stream.all(|r| async move { r }).await,
+        RuleCombinator::And(_) => result_stream.all(|r| async move { r }).await,
     }
 }
