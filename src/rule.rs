@@ -83,7 +83,7 @@ async fn apply_number_of_lines_rule(rule: NumberComparisonBaseRule, ctx: &Contex
     }
 }
 
-async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
+pub(crate) async fn apply_base_rule(rule: &BaseRule, ctx: &Context<'_>) -> bool {
     let dirpath_result = match rule.dirpath.as_ref() {
         Some(dirpath_rule) => apply_dirpath_rule(dirpath_rule.clone(), ctx).await,
         None => true,
@@ -131,12 +131,13 @@ async fn apply_base_rules(rule_combinator: &BaseRuleCombinator, ctx: &Context<'_
 
 pub(crate) async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
     match rule {
-        Rule::Variant0 {
-            filename,
+        Rule::Variant0(base_rule_combinator) => apply_base_rules(base_rule_combinator, ctx).await,
+        Rule::Variant1 {
             dirpath,
             content,
-            not,
+            filename,
             number_of_lines,
+            not,
         } => {
             let base_rule = BaseRule {
                 dirpath: dirpath.clone(),
@@ -151,7 +152,6 @@ pub(crate) async fn apply_rule(rule: &Rule, ctx: &Context<'_>) -> bool {
             };
             base_result && not_result
         }
-        Rule::Variant1(base_rule_combinator) => apply_base_rules(base_rule_combinator, ctx).await,
     }
 }
 

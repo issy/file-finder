@@ -19,6 +19,11 @@ fn setup_directory() -> TempDir {
         .expect("Failed to create file2.txt");
     std::fs::write(sub_dir_path.join("file3.txt"), "foo bar baz")
         .expect("Failed to create file3.txt");
+    std::fs::write(
+        sub_dir_path.join("file4.rs"),
+        "This is a rust file. It will not be matched.",
+    )
+    .expect("Failed to create file4.rs");
 
     temp_dir
 }
@@ -48,7 +53,8 @@ fn can_find_files_using_and() {
         .arg(temp_dir.path())
         .assert()
         .success()
-        .stdout(contains("file2.txt"))
-        .stdout(contains("file1.txt").not())
-        .stdout(contains("subdir/file3.txt").not());
+        .stdout(contains("file1.txt"))
+        .stdout(contains("file2.txt").not())
+        .stdout(contains("subdir/file3.txt").not())
+        .stdout(contains("subdir/file4.rs").not());
 }
