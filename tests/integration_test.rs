@@ -58,3 +58,24 @@ fn can_find_files_using_and() {
         .stdout(contains("subdir/file3.txt").not())
         .stdout(contains("subdir/file4.rs").not());
 }
+
+#[test]
+fn can_find_files_using_or() {
+    let temp_dir = setup_directory();
+    let config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("data")
+        .join("using-or.yaml");
+
+    Command::cargo_bin("file-finder")
+        .unwrap()
+        .arg(config_path)
+        .arg("--directory")
+        .arg(temp_dir.path())
+        .assert()
+        .success()
+        .stdout(contains("file1.txt"))
+        .stdout(contains("file2.txt"))
+        .stdout(contains("subdir/file3.txt").not())
+        .stdout(contains("subdir/file4.rs"));
+}
