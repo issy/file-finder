@@ -16,5 +16,6 @@ jobs:
         with:
           node-version-file: package.json
       - uses: pnpm/action-setup@v6.0.9
-      - run: pnpm install
-      - run: prettier --check "**/*.{yaml,yml,json,md,ts}"
+        with:
+          run_install: true
+      - run: npx prettier --check "**/*.{yaml,yml,json,md,ts}"
