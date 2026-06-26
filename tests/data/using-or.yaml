@@ -1,6 +1,6 @@
 rules:
   or:
     - filename:
-        endswith: '.rs'
+        endswith: ".rs"
     - content:
-        contains: 'This is file'
+        contains: "This is file"
