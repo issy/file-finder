@@ -23,4 +23,4 @@ jobs:
 
       - run: cargo install cargo-changeset --version 0.1.7
 
-      - run: cargo changeset verify --base-branch "origin/main"
+      - run: cargo changeset verify
