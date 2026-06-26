@@ -7,7 +7,7 @@ mod generated {
 mod rule;
 
 use crate::generated::RulesConfigRules;
-use crate::rule::{Context, apply_rule, apply_rules};
+use crate::rule::{BUFFER_SIZE, Context, apply_rule, apply_rules};
 use futures::stream::{self, StreamExt};
 use serde::Deserialize;
 use std::collections::VecDeque;
@@ -15,6 +15,7 @@ use std::env::current_dir;
 use std::fs::File;
 use std::ops::Not;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[serde_args::generate(version)]
@@ -51,12 +52,10 @@ async fn find_files_in_directory_for_config(
                 || config
                     .exclude_dirs
                     .contains(
-                        &path
-                            .strip_prefix(directory)
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .to_string(),
+                        &generated::RulesConfigExcludeDirsItem::from_str(
+                            path.strip_prefix(directory).unwrap().to_str().unwrap(),
+                        )
+                        .unwrap(),
                     )
                     .not()
         })
@@ -83,10 +82,10 @@ async fn find_files_in_directory_for_config(
             async move {
                 let ctx = Context::new(&path, directory);
                 if match *rules {
-                    RulesConfigRules::Variant0(rule) => apply_rule(rule, &ctx).await,
-                    RulesConfigRules::Variant1(rule_combinator) => {
+                    RulesConfigRules::Variant0(rule_combinator) => {
                         apply_rules(rule_combinator, &ctx).await
                     }
+                    RulesConfigRules::Variant1(rule) => apply_rule(rule, &ctx).await,
                 } {
                     return Some(path);
                 }
@@ -94,7 +93,7 @@ async fn find_files_in_directory_for_config(
             }
             .await
         })
-        .buffer_unordered(32)
+        .buffer_unordered(BUFFER_SIZE)
         .collect::<Vec<_>>()
         .await
         .into_iter()

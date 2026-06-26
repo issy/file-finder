@@ -1,0 +1,6 @@
+rules:
+  or:
+    - filename:
+        endswith: '.rs'
+    - content:
+        contains: 'This is file'

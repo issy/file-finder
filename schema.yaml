@@ -7,10 +7,13 @@ $defs:
         properties:
           startswith:
             type: string
+            minLength: 1
           endswith:
             type: string
+            minLength: 1
           contains:
             type: string
+            minLength: 1
       - type: object
         properties:
           equals:
@@ -49,69 +52,78 @@ $defs:
       number_of_lines:
         $ref: "#/$defs/NumberComparisonBaseRule"
   BaseRuleCombinator:
-    type: object
-    properties:
-      or:
-        type: array
-        items:
-          $ref: "#/$defs/BaseRule"
-      xor:
-        type: array
-        items:
-          $ref: "#/$defs/BaseRule"
-      and:
-        type: array
-        items:
-          $ref: "#/$defs/BaseRule"
     oneOf:
-      - required:
+      - type: object
+        properties:
+          or:
+            type: array
+            items:
+              $ref: "#/$defs/BaseRule"
+        required:
           - or
-      - required:
+      - type: object
+        properties:
+          xor:
+            type: array
+            items:
+              $ref: "#/$defs/BaseRule"
+        required:
           - xor
-      - required:
+      - type: object
+        properties:
+          and:
+            type: array
+            items:
+              $ref: "#/$defs/BaseRule"
+        required:
           - and
   Rule:
     oneOf:
-      - allOf:
-          - $ref: "#/$defs/BaseRule"
-          - type: object
-            properties:
-              not:
-                $ref: "#/$defs/BaseRule"
       - $ref: "#/$defs/BaseRuleCombinator"
+      - allOf:
+        - $ref: "#/$defs/BaseRule"
+        - type: object
+          properties:
+            not:
+              $ref: "#/$defs/BaseRule"
   RuleCombinator:
-    type: object
-    properties:
-      or:
-        type: array
-        items:
-          $ref: "#/$defs/Rule"
-      xor:
-        type: array
-        items:
-          $ref: "#/$defs/Rule"
-      and:
-        type: array
-        items:
-          $ref: "#/$defs/Rule"
     oneOf:
-      - required:
+      - type: object
+        properties:
+          or:
+            type: array
+            items:
+              $ref: "#/$defs/Rule"
+        required:
           - or
-      - required:
+      - type: object
+        properties:
+          xor:
+            type: array
+            items:
+              $ref: "#/$defs/Rule"
+        required:
           - xor
-      - required:
+      - type: object
+        properties:
+          and:
+            type: array
+            items:
+              $ref: "#/$defs/Rule"
+        required:
           - and
   RulesConfig:
     type: object
     properties:
       rules:
         oneOf:
-          - $ref: "#/$defs/Rule"
           - $ref: "#/$defs/RuleCombinator"
+          - $ref: "#/$defs/Rule"
       exclude_dirs:
         type: array
         items:
           type: string
+          minLength: 1
     required:
       - rules
     additionalProperties: false
