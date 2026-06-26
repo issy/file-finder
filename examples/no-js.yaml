@@ -8,14 +8,14 @@ rules:
           endswith: .js
 
     - or:
-      - filename:
-          endswith: .ts
-      - filename:
-          endswith: .jsx
-      - filename:
-          endswith: .tsx
-      - dirpath:
-          startswith: src/views
-        filename:
-          not:
-            endswith: .js
+        - filename:
+            endswith: .ts
+        - filename:
+            endswith: .jsx
+        - filename:
+            endswith: .tsx
+        - dirpath:
+            startswith: src/views
+          filename:
+            not:
+              endswith: .js

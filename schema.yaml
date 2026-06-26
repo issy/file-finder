@@ -81,11 +81,11 @@ $defs:
     oneOf:
       - $ref: "#/$defs/BaseRuleCombinator"
       - allOf:
-        - $ref: "#/$defs/BaseRule"
-        - type: object
-          properties:
-            not:
-              $ref: "#/$defs/BaseRule"
+          - $ref: "#/$defs/BaseRule"
+          - type: object
+            properties:
+              not:
+                $ref: "#/$defs/BaseRule"
   RuleCombinator:
     oneOf:
       - type: object

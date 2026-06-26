@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - "**.yaml"
+      - "**.yml"
+      - "**.json"
+      - "**.md"
+      - "**.ts"
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v3
+        with:
+          node-version-file: package.json
+      - uses: pnpm/action-setup@v6.0.9
+        with:
+          run_install: true
+      - run: npx prettier --check "**/*.{yaml,yml,json,md,ts}"

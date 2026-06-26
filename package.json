@@ -1,0 +1,15 @@
+{
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "volta": {
+    "node": "24.18.0",
+    "pnpm": "11.9.0"
+  },
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "lint-staged": "17.0.8",
+    "husky": "9.1.7"
+  }
+}
