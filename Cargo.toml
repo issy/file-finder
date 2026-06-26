@@ -28,6 +28,22 @@ tempfile = { version = "3.27.0" }
 [workspace.dependencies]
 serde_yaml_ng = { version = "0.10.0" }
 
+[workspace.metadata]
+
+[workspace.metadata.changeset]
+commit = true
+tags = true
+keep-changesets = false
+tag-format = "version-only"
+changelog = "root"
+comparison-links = "enabled"
+zero-version-behavior = "auto-promote-on-major"
+base-branch = "origin/main"
+none-bump-behavior = "promote-to-patch"
+none-bump-promote-message-template = "Internal architectural changes"
+commit-title-template = "{new-version}"
+changes-in-body = true
+
 [profile.dist]
 inherits = "release"
 lto = "thin"
