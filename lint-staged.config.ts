@@ -6,5 +6,5 @@ export default {
   "schema.yaml": () => cargoBuild,
   "Cargo.(lock,toml)": () => cargoBuild,
   "*.rs": (files) => [cargoBuild, `cargo fmt -- ${files.join(" ")}`],
-  "*.{yaml,json,ts}": "npx prettier --write",
+  "*.{yaml,yml,json,md,ts}": "npx prettier --write",
 } satisfies Configuration;
