@@ -54,8 +54,17 @@ fn get_files(
         .overrides(override_builder.build().unwrap())
         .build()
         // TODO: Maybe report errors to user
-        .filter(|entry| entry.is_ok())
-        .map(|entry| entry.unwrap().path().to_path_buf())
+        .filter_map(|entry| match entry {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() {
+                    Some(path.to_path_buf())
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        })
         .collect::<Vec<_>>()
 }
 
