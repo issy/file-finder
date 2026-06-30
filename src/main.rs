@@ -6,16 +6,14 @@ mod generated {
 
 mod rule;
 
-use crate::generated::RulesConfigRules;
+use crate::generated::{RulesConfigIgnoreItem, RulesConfigRules};
 use crate::rule::{BUFFER_SIZE, Context, apply_rule, apply_rules};
 use futures::stream::{self, StreamExt};
+use ignore::overrides::OverrideBuilder;
 use serde::Deserialize;
-use std::collections::VecDeque;
 use std::env::current_dir;
 use std::fs::File;
-use std::ops::Not;
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Arc;
 
 #[serde_args::generate(version)]
@@ -26,6 +24,7 @@ struct Args {
     config_file: PathBuf,
     #[serde(alias = "d")]
     directory: Option<PathBuf>,
+    use_gitignore: Option<bool>,
 }
 
 fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
@@ -38,41 +37,43 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
     }
 }
 
+fn get_files(
+    in_directory: &PathBuf,
+    ignoring_patterns: Vec<RulesConfigIgnoreItem>,
+    use_gitignore: bool,
+) -> Vec<PathBuf> {
+    let mut override_builder = OverrideBuilder::new(in_directory);
+    ignoring_patterns.iter().for_each(|pattern| {
+        // TODO: Nicer error messages here
+        override_builder.add(&pattern.to_string()).unwrap();
+    });
+
+    ignore::WalkBuilder::new(in_directory)
+        .standard_filters(false)
+        .git_ignore(use_gitignore)
+        .overrides(override_builder.build().unwrap())
+        .build()
+        // TODO: Maybe report errors to user
+        .filter_map(|entry| match entry {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() {
+                    Some(path.to_path_buf())
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        })
+        .collect::<Vec<_>>()
+}
+
 async fn find_files_in_directory_for_config(
     directory: &PathBuf,
     config: generated::RulesConfig,
+    use_gitignore: bool,
 ) -> Vec<PathBuf> {
-    let mut all_files: Vec<PathBuf> = Vec::new();
-    let mut to_explore: VecDeque<PathBuf> = directory
-        .read_dir()
-        .unwrap()
-        .map(|e| e.unwrap().path())
-        .filter(|path| {
-            path.is_file()
-                || config
-                    .exclude_dirs
-                    .contains(
-                        &generated::RulesConfigExcludeDirsItem::from_str(
-                            path.strip_prefix(directory).unwrap().to_str().unwrap(),
-                        )
-                        .unwrap(),
-                    )
-                    .not()
-        })
-        .collect();
-
-    while !to_explore.is_empty() {
-        let current_path = to_explore.pop_front().unwrap();
-        if current_path.is_file() {
-            all_files.push(current_path);
-        } else {
-            let read_dir = current_path.read_dir().unwrap();
-            read_dir.for_each(|entry| {
-                let path = entry.unwrap().path();
-                to_explore.push_back(path);
-            });
-        }
-    }
+    let all_files = get_files(directory, config.ignore.clone(), use_gitignore);
 
     let rules = Arc::new(&config.rules);
 
@@ -120,7 +121,9 @@ async fn main() {
         .map(Result::unwrap)
         .unwrap_or(current_dir().unwrap());
 
-    let matched_files = find_files_in_directory_for_config(&directory, config).await;
+    let matched_files =
+        find_files_in_directory_for_config(&directory, config, args.use_gitignore.unwrap_or(false))
+            .await;
 
     let mut matched_files_relative = matched_files
         .iter()

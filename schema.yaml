@@ -119,7 +119,7 @@ $defs:
         oneOf:
           - $ref: "#/$defs/RuleCombinator"
           - $ref: "#/$defs/Rule"
-      exclude_dirs:
+      ignore:
         type: array
         items:
           type: string
