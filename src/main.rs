@@ -6,7 +6,7 @@ mod generated {
 
 mod rule;
 
-use crate::generated::{RulesConfigExcludeDirsItem, RulesConfigRules};
+use crate::generated::{RulesConfigIgnoreItem, RulesConfigRules};
 use crate::rule::{BUFFER_SIZE, Context, apply_rule, apply_rules};
 use futures::stream::{self, StreamExt};
 use ignore::overrides::OverrideBuilder;
@@ -39,7 +39,7 @@ fn validate_directory(path: PathBuf) -> Result<PathBuf, String> {
 
 fn get_files(
     in_directory: &PathBuf,
-    ignoring_patterns: Vec<RulesConfigExcludeDirsItem>,
+    ignoring_patterns: Vec<RulesConfigIgnoreItem>,
     use_gitignore: bool,
 ) -> Vec<PathBuf> {
     let mut override_builder = OverrideBuilder::new(in_directory);
@@ -64,7 +64,7 @@ async fn find_files_in_directory_for_config(
     config: generated::RulesConfig,
     use_gitignore: bool,
 ) -> Vec<PathBuf> {
-    let all_files = get_files(directory, config.exclude_dirs.clone(), use_gitignore);
+    let all_files = get_files(directory, config.ignore.clone(), use_gitignore);
 
     let rules = Arc::new(&config.rules);
 
